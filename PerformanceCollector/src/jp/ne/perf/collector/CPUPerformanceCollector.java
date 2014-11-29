@@ -85,7 +85,7 @@ public class CPUPerformanceCollector implements Runnable {
 		this.setPassword(password);
 	}
 
-	private static final String COMMAND = "export LANG=C; while : ; do mpstat -P ALL | sed -e \"/^$\\|Linux/d\"; sleep 1 ; done ";
+	private static final String COMMAND = "export LANG=C; while : ; do mpstat -P ALL | sed -e \"/^$\\|Linux/d\"; sleep 5 ; done ";
 
 	@Override
 	public void run() {
@@ -116,9 +116,7 @@ public class CPUPerformanceCollector implements Runnable {
 			BufferedReader br = new BufferedReader(isr);
 
 
-
 			insertMetrics(br);
-
 
 			channel.disconnect();
 			session.disconnect();
