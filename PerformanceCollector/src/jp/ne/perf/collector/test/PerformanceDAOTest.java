@@ -1,4 +1,4 @@
-package jp.co.nssol.sysrdc.systech.arc.perf.collector.test;
+package jp.ne.perf.collector.test;
 
 import static org.junit.Assert.*;
 
@@ -8,12 +8,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 
-import jp.co.nssol.sysrdc.systech.arc.perf.collector.CPUCore;
-import jp.co.nssol.sysrdc.systech.arc.perf.collector.CPUPerformance;
-import jp.co.nssol.sysrdc.systech.arc.perf.collector.CPUPerformanceCollectorException;
-import jp.co.nssol.sysrdc.systech.arc.perf.collector.CPUPerformanceDAO;
-import jp.co.nssol.sysrdc.systech.arc.perf.collector.PerformanceCollectorException;
-import jp.co.nssol.sysrdc.systech.arc.perf.collector.PerformanceDAO;
+import jp.ne.perf.collector.CPUCore;
+import jp.ne.perf.collector.CPUPerformance;
+import jp.ne.perf.collector.CPUPerformanceCollectorException;
+import jp.ne.perf.collector.CPUPerformanceDAO;
+import jp.ne.perf.collector.PerformanceCollectorException;
+import jp.ne.perf.collector.PerformanceDAO;
 
 import org.junit.Test;
 

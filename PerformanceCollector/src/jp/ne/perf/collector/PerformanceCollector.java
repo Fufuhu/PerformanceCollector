@@ -1,4 +1,4 @@
-package jp.co.nssol.sysrdc.systech.arc;
+package jp.ne.perf.collector;
 
 
 import java.io.InputStream;
