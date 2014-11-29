@@ -1,0 +1,9 @@
+ドライバ
+　derbyclient.jar
+　org.apache.derby.jdbc.ClientDriver
+接続文字列
+　jdbc:derby://localhost:1527/PerformanceStore;create=true
+ユーザ
+　APP
+パスワード
+　APP

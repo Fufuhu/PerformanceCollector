@@ -1,0 +1,5 @@
+■ iostatのオプション
+
+-d : デバイスの利用率レポートを表示する。
+
+LANG=C; date +"%Y/%m/%d %k:%M:%S" ;iostat -dx | sed -e "/^$\|Linux/d"
