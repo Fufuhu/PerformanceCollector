@@ -9,6 +9,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import performancemanager.performancecollector.dao.CPUPerformanceDAO;
+import performancemanager.performancecollector.exception.PerformanceCollectorException;
+
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
@@ -38,7 +41,7 @@ public class CPUPerformanceCollector implements Runnable {
 	/*
 	 * DAOの設定
 	 */
-	private static final PerformanceDAO DAO = new PerformanceDAO(HOSTNAME, PORT, DATABASE, USER, PASSWORD);
+	private static final CPUPerformanceDAO DAO = new CPUPerformanceDAO(HOSTNAME, PORT, DATABASE, USER, PASSWORD);
 
 	private String host;
 	private int port;

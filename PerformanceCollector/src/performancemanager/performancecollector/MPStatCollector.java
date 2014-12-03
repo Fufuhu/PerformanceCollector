@@ -9,6 +9,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import performancemanager.performancecollector.dao.CPUPerformanceDAO;
+import performancemanager.performancecollector.exception.PerformanceCollectorException;
+
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
@@ -167,7 +170,7 @@ public class MPStatCollector implements Runnable {
 					try {
 						Double value = Double.parseDouble(data[i]);
 						DAO.insertCPUMetrics(this.getHost(), this.getPort(), time, id, header[i], value);
-					} catch (NumberFormatException e) {
+					} catch (NumberFormatException | PerformanceCollectorException e) {
 						//e.printStackTrace();
 						//System.err.println("想定内の例外: ヘッダ行の読み込み");
 						continue;

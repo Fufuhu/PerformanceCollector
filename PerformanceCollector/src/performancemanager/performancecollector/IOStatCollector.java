@@ -1,8 +1,15 @@
 package performancemanager.performancecollector;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import performancemanager.performancecollector.dao.IOStatDAO;
+import performancemanager.performancecollector.exception.IOStatHeaderException;
 
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
@@ -15,11 +22,23 @@ public class IOStatCollector implements Runnable{
 
 	public static void main(String[] args)  {
 
-		IOStatCollector collector = new IOStatCollector("192.168.1.3", 10022, "fujiwara", "fujiwara");
+		IOStatCollector collector = new IOStatCollector("192.168.1.4", 22, "fujiwara", "fujiwara");
 		Thread thread = new Thread(collector);
 		thread.start();
 	}
 
+	/*
+	 * 格納先データベースの接続情報
+	 */
+	private static final String HOSTNAME = "localhost";
+	private static final int PORT = 1527;
+	private static final String DATABASE = "PerformanceStore";
+	private static final String USER = "APP";
+	private static final String PASSWORD = "APP";
+	/*
+	 * DAOの設定
+	 */
+	private static final IOStatDAO DAO = new IOStatDAO(HOSTNAME, PORT, DATABASE, USER, PASSWORD);
 
 	private String host;
 	private int port;
@@ -65,7 +84,7 @@ public class IOStatCollector implements Runnable{
 		this.setPassword(password);
 	}
 
-	private static String COMMAND = "export LANG=C; while : ; do date +\"%Y/%m/%d %k:%M:%S\"; iostat -dx | sed -e \"/^$\\|Linux/d\"; sleep 1; done";
+	private static String COMMAND = "export LANG=C; while : ; do date +\"%Y/%m/%d %k:%M:%S\"; iostat -dx | sed -e \"/^$\\|Linux/d\" ; sleep 1; done";
 
 	@Override
 	public void run() {
@@ -95,12 +114,14 @@ public class IOStatCollector implements Runnable{
 			InputStreamReader isr = new InputStreamReader(in);
 			BufferedReader br = new BufferedReader(isr);
 
+
+			/*
 			String str = null;
 			while((str = br.readLine()) != null) {
 				System.out.println(str);
-			}
+			}*/
 
-			//insertMetrics(br);
+			insertMetrics(br);
 
 
 			channel.disconnect();
@@ -110,6 +131,64 @@ public class IOStatCollector implements Runnable{
 			e.printStackTrace();
 		}
 	}
+
+	/**
+	 * メトリクスを挿入する。
+	 * @param br
+	 */
+	public void insertMetrics(BufferedReader br) {
+		SimpleDateFormat timeformat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		String line = null;
+
+		try {
+			while((line = br.readLine()) != null) {
+				String[] array = line.split("\\s+");
+
+				String[] header = null;
+				/*
+				 * array[0] array[1] が yyyy/MM/dd HH:mm:ssの形態 → 時刻処理へ
+				 * array[0] が Device: → メトリクスのヘッダ処理へ
+				 * 上記に当てはまらない → 実際のinsert処理へ
+				 */
+
+				try {
+					Date time = timeformat.parse(array[0]+" "+array[1]);
+				} catch (ParseException e) {
+					if(array[0].equals("Device:")) {
+						header = array;
+					} else {
+						try {
+							collectIOStatData(array, header);
+						} catch (IOStatHeaderException e1) {
+							// TODO 自動生成された catch ブロック
+							e1.printStackTrace();
+						}
+					}
+
+				}
+
+				/*
+				for(String col:array) {
+					System.out.println(col);
+				}*/
+			}
+		} catch (IOException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
+		}
+	}
+
+
+	private static final String HEADER_EXCEPTION_MESSAGE = "ヘッダの配列長がメトリクスの配列長と一致しません。";
+
+	private void collectIOStatData(String[] array, String[] header) throws IOStatHeaderException {
+		// TODO 自動生成されたメソッド・スタブ
+		if(array.length != header.length) {
+			throw new IOStatHeaderException(HEADER_EXCEPTION_MESSAGE);
+		}
+
+	}
+
 	private class MyUserInfo implements UserInfo, UIKeyboardInteractive {
 
 		@Override

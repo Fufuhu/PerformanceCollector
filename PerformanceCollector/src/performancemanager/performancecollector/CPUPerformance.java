@@ -2,7 +2,7 @@ package performancemanager.performancecollector;
 
 import java.util.HashMap;
 
-public class CPUPerformance {
+public class CPUPerformance implements Performance{
 	private HashMap<String, Double> metrics;
 
 	public CPUPerformance() {

@@ -1,4 +1,4 @@
-package performancemanager.performancecollector;
+package performancemanager.performancecollector.exception;
 
 public class PerformanceCollectorException extends Exception {
 

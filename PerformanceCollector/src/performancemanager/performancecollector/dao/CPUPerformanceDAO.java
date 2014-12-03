@@ -1,4 +1,4 @@
-package performancemanager.performancecollector;
+package performancemanager.performancecollector.dao;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -8,7 +8,13 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
 
-public class PerformanceDAO {
+import performancemanager.performancecollector.CPUCore;
+import performancemanager.performancecollector.CPUPerformance;
+import performancemanager.performancecollector.exception.CPUPerformanceCollectorException;
+import performancemanager.performancecollector.exception.PerformanceCollectorException;
+
+public class CPUPerformanceDAO {
+
 	private String hostname;
 	private int port;
 	private String user;
@@ -53,6 +59,8 @@ public class PerformanceDAO {
 	}
 
 
+
+
 	/**
 	 * DBへの接続情報を指定してインスタンス化する
 	 * @param hostname DBのホスト名またはIPアドレス
@@ -61,7 +69,7 @@ public class PerformanceDAO {
 	 * @param user DBへの接続ユーザ名
 	 * @param password DBへの接続パスワード
 	 */
-	public PerformanceDAO(String hostname, int port, String database, String user, String password) {
+	public CPUPerformanceDAO(String hostname, int port, String database, String user, String password) {
 		this.setHostname(hostname);
 		this.setPort(port);
 		this.setUser(user);
@@ -107,7 +115,7 @@ public class PerformanceDAO {
 		}
 	}
 
-	private static final String INSERT_CPU_METRIC_SQL ="INSERT INTO CpuMetrics values(?, ?, ?, ?, ?, ?)";
+	private static final String INSERT_METRIC_SQL ="INSERT INTO CpuMetrics values(?, ?, ?, ?, ?, ?)";
 
 
 	/**
@@ -118,10 +126,9 @@ public class PerformanceDAO {
 	 * @param corename CPUコア名
 	 * @param metricname メトリック名
 	 * @param metricvalue メトリック値
-	 * @throw PerformanceCollectorException
 	 */
-	public void insertCPUMetrics(String hostname, int port, Timestamp timestamp, String corename, String metricname, double metricvalue) throws PerformanceCollectorException {
-		try(PreparedStatement ps = connection.prepareStatement(INSERT_CPU_METRIC_SQL)) {
+	public void insertCPUMetrics(String hostname, int port, Timestamp timestamp, String corename, String metricname, double metricvalue) throws PerformanceCollectorException{
+		try(PreparedStatement ps = connection.prepareStatement(INSERT_METRIC_SQL)) {
 			/*
 			 * パラメータを設定する。
 			 */
@@ -144,8 +151,13 @@ public class PerformanceDAO {
 	}
 
 	//一定のタイムレンジのメトリクス値を取得するためのSQL
-	private static final String SELECT_BETWEEN_SQL= "SELECT AcquiredTimeStamp, MetricValue from CPUMetrics where AcquiredTimeStamp between ? AND ? ORDER BY AcquiredTimeStamp";
+	private static final String SELECT_BETWEEN_SQL
+	= "SELECT MetricName, AcquiredTimeStamp, MetricValue "
+			+ "from CPUMetrics where AcquiredTimeStamp between ? AND ? "
+			+ "AND HostName= ? AND PortNumber = ? AND CoreName = ?"
+			+ " ORDER BY AcquiredTimeStamp";
 	private static final String ACQUIRED_TIMESTAMP = "AcquiredTimeStamp";
+	private static final String METRIC_NAME="MetricName";
 	private static final String METRIC_VALUE = "MetricValue";
 
 	/**
@@ -156,9 +168,9 @@ public class PerformanceDAO {
 	 * @param corename
 	 * @param metricname
 	 * @return 特定の時間帯のメトリクス値を含んだCPUCoreインスタンス
-	 * @throws PerformanceCollectorException
+	 * @throws CPUPerformanceCollectorException
 	 */
-	public CPUCore getCPUMetrics(Timestamp start, Timestamp end, String hostname, String corename, String metricname)  throws PerformanceCollectorException {
+	public CPUCore getCPUMetrics(Timestamp start, Timestamp end, String hostname, int portnumber, String corename)  throws CPUPerformanceCollectorException {
 		CPUCore core = new CPUCore(corename);
 
 		try(PreparedStatement ps = connection.prepareStatement(SELECT_BETWEEN_SQL)) {
@@ -170,6 +182,9 @@ public class PerformanceDAO {
 			 */
 			ps.setTimestamp(1, start);
 			ps.setTimestamp(2, end);
+			ps.setString(3, hostname);
+			ps.setInt(4, portnumber);
+			ps.setString(5, corename);
 
 			/*
 			 * SQLを実行する。
@@ -180,7 +195,7 @@ public class PerformanceDAO {
 			while(rs.next()) {
 				Timestamp ats = rs.getTimestamp(ACQUIRED_TIMESTAMP);
 				Double value = rs.getDouble(METRIC_VALUE);
-
+				String metricname = rs.getString(METRIC_NAME);
 				CPUPerformance performance = new CPUPerformance();
 				performance.putMetrics(metricname, value);
 				core.putPerformance(new Date(ats.getTime()), performance);
@@ -188,41 +203,23 @@ public class PerformanceDAO {
 		} catch (SQLException e) {
 			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
-			throw new PerformanceCollectorException();
+			throw new CPUPerformanceCollectorException();
 		}
 
 		return core;
 	}
-	private static final String INSERT_IOSTAT_METRIC_SQL ="INSERT INTO IoStatMetrics values(?, ?, ?, ?, ?, ?)";
 
+
+	private static final String TRUNCATE_CPU_METRICS_TABLE = "truncate table CPUMetrics";
 	/**
-	 * IOStatの性能情報を格納する。
-	 * @param hostname
-	 * @param port
-	 * @param timestamp
-	 * @param devicename
-	 * @param metricname
-	 * @param metricvalue
+	 *
 	 * @throws PerformanceCollectorException
 	 */
-	public void insertIoStatMetrics(String hostname, int port, Timestamp timestamp, String devicename, String metricname, double metricvalue) throws PerformanceCollectorException{
-		try(PreparedStatement ps = connection.prepareStatement(INSERT_IOSTAT_METRIC_SQL)) {
-			/*
-			 * パラメータを設定する。
-			 */
-			ps.setString(1, hostname);
-			ps.setInt(2, port);
-			ps.setTimestamp(3, timestamp);
-			ps.setString(4, devicename);
-			ps.setString(5, metricname);
-			ps.setDouble(6, metricvalue);
-
-			/*
-			 * SQLを実行する。
-			 */
+	public void truncateCPUMetricTable() throws PerformanceCollectorException {
+		try(PreparedStatement ps = connection.prepareStatement(TRUNCATE_CPU_METRICS_TABLE)) {
 			ps.executeUpdate();
-			connection.commit();
 		} catch (SQLException e) {
+			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
 			throw new PerformanceCollectorException();
 		}

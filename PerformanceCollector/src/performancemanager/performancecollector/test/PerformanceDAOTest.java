@@ -16,9 +16,9 @@ import org.junit.Test;
 
 import performancemanager.performancecollector.CPUCore;
 import performancemanager.performancecollector.CPUPerformance;
-import performancemanager.performancecollector.CPUPerformanceCollectorException;
-import performancemanager.performancecollector.CPUPerformanceDAO;
-import performancemanager.performancecollector.PerformanceCollectorException;
+import performancemanager.performancecollector.dao.CPUPerformanceDAO;
+import performancemanager.performancecollector.exception.CPUPerformanceCollectorException;
+import performancemanager.performancecollector.exception.PerformanceCollectorException;
 
 public class PerformanceDAOTest {
 
@@ -81,7 +81,12 @@ public class PerformanceDAOTest {
 		/*
 		 * CPUのメトリクス値を挿入する。
 		 */
-		dao.insertCPUMetrics(targethost, port , time, corename, metricname, metricValue);
+		try {
+			dao.insertCPUMetrics(targethost, port , time, corename, metricname, metricValue);
+		} catch (PerformanceCollectorException e1) {
+			// TODO 自動生成された catch ブロック
+			e1.printStackTrace();
+		}
 
 
 		/*
@@ -197,11 +202,15 @@ public class PerformanceDAOTest {
 		String metricname = "usr";
 		Double metricvalue = 20.0d;
 
-		dao.insertCPUMetrics(hostname, port, tsLowerLimit_Outside, corename, metricname, metricvalue);
-		dao.insertCPUMetrics(hostname, port, tsLowerLimit_Inside, corename, metricname, metricvalue);
-		dao.insertCPUMetrics(hostname, port, tsHigherLimit_Inside, corename, metricname, metricvalue);
-		dao.insertCPUMetrics(hostname, port, tsHigherLimit_Outside, corename, metricname, metricvalue);
-
+		try {
+			dao.insertCPUMetrics(hostname, port, tsLowerLimit_Outside, corename, metricname, metricvalue);
+			dao.insertCPUMetrics(hostname, port, tsLowerLimit_Inside, corename, metricname, metricvalue);
+			dao.insertCPUMetrics(hostname, port, tsHigherLimit_Inside, corename, metricname, metricvalue);
+			dao.insertCPUMetrics(hostname, port, tsHigherLimit_Outside, corename, metricname, metricvalue);
+		} catch (PerformanceCollectorException e1) {
+			// TODO 自動生成された catch ブロック
+			e1.printStackTrace();
+		}
 		CPUCore core = null;
 		try {
 			core = dao.getCPUMetrics(tsLowerLimit_Inside, tsHigherLimit_Inside, hostname, port, corename);
@@ -237,7 +246,12 @@ public class PerformanceDAOTest {
 		String metricname = "usr";
 		Double metricvalue = 20.0d;
 
-		dao.insertCPUMetrics(targethost, port, ts_start, corename, metricname, metricvalue);
+		try {
+			dao.insertCPUMetrics(targethost, port, ts_start, corename, metricname, metricvalue);
+		} catch (PerformanceCollectorException e1) {
+			// TODO 自動生成された catch ブロック
+			e1.printStackTrace();
+		}
 
 		try {
 			CPUCore core = dao.getCPUMetrics(ts_start, ts_end, targethost, port, corename);
