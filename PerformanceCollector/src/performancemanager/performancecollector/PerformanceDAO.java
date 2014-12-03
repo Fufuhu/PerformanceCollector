@@ -1,4 +1,4 @@
-package jp.ne.perf.collector;
+package performancemanager.performancecollector;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

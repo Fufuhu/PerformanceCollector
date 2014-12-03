@@ -1,4 +1,4 @@
-package jp.ne.perf.collector;
+package performancemanager.performancecollector;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,13 +16,13 @@ import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UIKeyboardInteractive;
 import com.jcraft.jsch.UserInfo;
 
+public class MPStatCollector implements Runnable {
 
-public class CPUPerformanceCollector implements Runnable {
 	public static void main(String[] args) {
 
 
 
-		Thread thread = new Thread(new CPUPerformanceCollector("192.168.1.4", 22, "fujiwara", "fujiwara"));
+		Thread thread = new Thread(new CPUPerformanceCollector("192.168.1.3", 10022, "fujiwara", "fujiwara"));
 		thread.start();
 	}
 
@@ -38,7 +38,7 @@ public class CPUPerformanceCollector implements Runnable {
 	/*
 	 * DAOの設定
 	 */
-	private static final PerformanceDAO DAO = new PerformanceDAO(HOSTNAME, PORT, DATABASE, USER, PASSWORD);
+	private static final CPUPerformanceDAO DAO = new CPUPerformanceDAO(HOSTNAME, PORT, DATABASE, USER, PASSWORD);
 
 	private String host;
 	private int port;
@@ -78,14 +78,14 @@ public class CPUPerformanceCollector implements Runnable {
 	}
 
 
-	public CPUPerformanceCollector(String host, int port, String user, String password) {
+	public MPStatCollector(String host, int port, String user, String password) {
 		this.setHost(host);
 		this.setPort(port);
 		this.setUser(user);
 		this.setPassword(password);
 	}
 
-	private static final String COMMAND = "export LANG=C; while : ; do mpstat -P ALL | sed -e \"/^$\\|Linux/d\"; sleep 5 ; done ";
+	private static final String COMMAND = "export LANG=C; while : ; do mpstat -P ALL | sed -e \"/^$\\|Linux/d\"; sleep 1 ; done ";
 
 	@Override
 	public void run() {
@@ -116,7 +116,9 @@ public class CPUPerformanceCollector implements Runnable {
 			BufferedReader br = new BufferedReader(isr);
 
 
+
 			insertMetrics(br);
+
 
 			channel.disconnect();
 			session.disconnect();
@@ -165,7 +167,7 @@ public class CPUPerformanceCollector implements Runnable {
 					try {
 						Double value = Double.parseDouble(data[i]);
 						DAO.insertCPUMetrics(this.getHost(), this.getPort(), time, id, header[i], value);
-					} catch (NumberFormatException|PerformanceCollectorException e) {
+					} catch (NumberFormatException e) {
 						//e.printStackTrace();
 						//System.err.println("想定内の例外: ヘッダ行の読み込み");
 						continue;

@@ -1,4 +1,4 @@
-package jp.ne.perf.collector;
+package performancemanager.performancecollector;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -145,8 +145,13 @@ public class CPUPerformanceDAO {
 	}
 
 	//一定のタイムレンジのメトリクス値を取得するためのSQL
-	private static final String SELECT_BETWEEN_SQL= "SELECT AcquiredTimeStamp, MetricValue from CPUMetrics where AcquiredTimeStamp between ? AND ? ORDER BY AcquiredTimeStamp";
+	private static final String SELECT_BETWEEN_SQL
+	= "SELECT MetricName, AcquiredTimeStamp, MetricValue "
+			+ "from CPUMetrics where AcquiredTimeStamp between ? AND ? "
+			+ "AND HostName= ? AND PortNumber = ? AND CoreName = ?"
+			+ " ORDER BY AcquiredTimeStamp";
 	private static final String ACQUIRED_TIMESTAMP = "AcquiredTimeStamp";
+	private static final String METRIC_NAME="MetricName";
 	private static final String METRIC_VALUE = "MetricValue";
 
 	/**
@@ -159,7 +164,7 @@ public class CPUPerformanceDAO {
 	 * @return 特定の時間帯のメトリクス値を含んだCPUCoreインスタンス
 	 * @throws CPUPerformanceCollectorException
 	 */
-	public CPUCore getCPUMetrics(Timestamp start, Timestamp end, String hostname, String corename, String metricname)  throws CPUPerformanceCollectorException {
+	public CPUCore getCPUMetrics(Timestamp start, Timestamp end, String hostname, int portnumber, String corename)  throws CPUPerformanceCollectorException {
 		CPUCore core = new CPUCore(corename);
 
 		try(PreparedStatement ps = connection.prepareStatement(SELECT_BETWEEN_SQL)) {
@@ -171,6 +176,9 @@ public class CPUPerformanceDAO {
 			 */
 			ps.setTimestamp(1, start);
 			ps.setTimestamp(2, end);
+			ps.setString(3, hostname);
+			ps.setInt(4, portnumber);
+			ps.setString(5, corename);
 
 			/*
 			 * SQLを実行する。
@@ -181,7 +189,7 @@ public class CPUPerformanceDAO {
 			while(rs.next()) {
 				Timestamp ats = rs.getTimestamp(ACQUIRED_TIMESTAMP);
 				Double value = rs.getDouble(METRIC_VALUE);
-
+				String metricname = rs.getString(METRIC_NAME);
 				CPUPerformance performance = new CPUPerformance();
 				performance.putMetrics(metricname, value);
 				core.putPerformance(new Date(ats.getTime()), performance);
@@ -195,5 +203,20 @@ public class CPUPerformanceDAO {
 		return core;
 	}
 
+
+	private static final String TRUNCATE_CPU_METRICS_TABLE = "truncate table CPUMetrics";
+	/**
+	 *
+	 * @throws PerformanceCollectorException
+	 */
+	public void truncateCPUMetricTable() throws PerformanceCollectorException {
+		try(PreparedStatement ps = connection.prepareStatement(TRUNCATE_CPU_METRICS_TABLE)) {
+			ps.executeUpdate();
+		} catch (SQLException e) {
+			// TODO 自動生成された catch ブロック
+			e.printStackTrace();
+			throw new PerformanceCollectorException();
+		}
+	}
 
 }
