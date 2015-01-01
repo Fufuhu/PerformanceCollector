@@ -8,13 +8,12 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
 
-import performancemanager.performancecollector.CPUCore;
-import performancemanager.performancecollector.CPUPerformance;
-import performancemanager.performancecollector.exception.CPUPerformanceCollectorException;
+import performancemanager.performancecollector.IODevice;
+import performancemanager.performancecollector.IOPerformance;
+import performancemanager.performancecollector.exception.IOPerformanceCollectorException;
 import performancemanager.performancecollector.exception.PerformanceCollectorException;
 
-public class CPUPerformanceDAO {
-
+public class IOStatDAO {
 	private String hostname;
 	private int port;
 	private String user;
@@ -30,52 +29,26 @@ public class CPUPerformanceDAO {
 		connection.close();
 	}
 
-
 	private String password;
 	private String database;
-
-	public String getDatabase() {
-		return database;
-	}
-
-	public void setDatabase(String database) {
-		this.database = database;
-	}
 
 	public String getHostname() {
 		return hostname;
 	}
-
 	public int getPort() {
 		return port;
 	}
-
 	public String getUser() {
 		return user;
 	}
-
+	public Connection getConnection() {
+		return connection;
+	}
 	public String getPassword() {
 		return password;
 	}
-
-
-
-
-	/**
-	 * DBへの接続情報を指定してインスタンス化する
-	 * @param hostname DBのホスト名またはIPアドレス
-	 * @param port DBのポート番号
-	 * @param database DBの名前
-	 * @param user DBへの接続ユーザ名
-	 * @param password DBへの接続パスワード
-	 */
-	public CPUPerformanceDAO(String hostname, int port, String database, String user, String password) {
-		this.setHostname(hostname);
-		this.setPort(port);
-		this.setUser(user);
-		this.setPassword(password);
-		this.setDatabase(database);
-		this.connectDB();
+	public String getDatabase() {
+		return database;
 	}
 
 	public void setHostname(String hostname) {
@@ -87,11 +60,31 @@ public class CPUPerformanceDAO {
 	public void setUser(String user) {
 		this.user = user;
 	}
+	public void setConnection(Connection connection) {
+		this.connection = connection;
+	}
 	public void setPassword(String password) {
 		this.password = password;
 	}
-
-
+	public void setDatabase(String database) {
+		this.database = database;
+	}
+	/**
+	 * DBへの接続情報を指定してインスタンス化する
+	 * @param hostname DBのホスト名またはIPアドレス
+	 * @param port DBのポート番号
+	 * @param database DBの名前
+	 * @param user DBへの接続ユーザ名
+	 * @param password DBへの接続パスワード
+	 */
+	public IOStatDAO(String hostname, int port, String database, String user, String password) {
+		this.setHostname(hostname);
+		this.setPort(port);
+		this.setUser(user);
+		this.setPassword(password);
+		this.setDatabase(database);
+		this.connectDB();
+	}
 
 	private static String DRIVER = "org.apache.derby.jdbc.ClientDriver";
 	/**
@@ -115,19 +108,18 @@ public class CPUPerformanceDAO {
 		}
 	}
 
-	private static final String INSERT_METRIC_SQL ="INSERT INTO CpuMetrics values(?, ?, ?, ?, ?, ?)";
 
-
+	private static final String INSERT_METRIC_SQL ="INSERT INTO IoStatMetrics values(?, ?, ?, ?, ?, ?)";
 	/**
 	 * CPUのメトリクス値をデータベースに投入する。
 	 * @param hostname メトリック取得元のホスト名
 	 * @param port メトリック取得元のポート番号
 	 * @param timestamp 取得した日時を表すタイムスタンプ
-	 * @param corename CPUコア名
+	 * @param device IOデバイス名
 	 * @param metricname メトリック名
 	 * @param metricvalue メトリック値
 	 */
-	public void insertCPUMetrics(String hostname, int port, Timestamp timestamp, String corename, String metricname, double metricvalue) throws PerformanceCollectorException{
+	public void insertMetrics(String hostname, int port, Timestamp timestamp, String device, String metricname, double metricvalue) {
 		try(PreparedStatement ps = connection.prepareStatement(INSERT_METRIC_SQL)) {
 			/*
 			 * パラメータを設定する。
@@ -135,7 +127,7 @@ public class CPUPerformanceDAO {
 			ps.setString(1, hostname);
 			ps.setInt(2, port);
 			ps.setTimestamp(3, timestamp);
-			ps.setString(4, corename);
+			ps.setString(4, device);
 			ps.setString(5, metricname);
 			ps.setDouble(6, metricvalue);
 
@@ -146,84 +138,72 @@ public class CPUPerformanceDAO {
 			connection.commit();
 		} catch (SQLException e) {
 			e.printStackTrace();
-			throw new PerformanceCollectorException();
 		}
 	}
 
-	//一定のタイムレンジのメトリクス値を取得するためのSQL
+
 	private static final String SELECT_BETWEEN_SQL
 	= "SELECT MetricName, AcquiredTimeStamp, MetricValue "
-			+ "from CPUMetrics where AcquiredTimeStamp between ? AND ? "
-			+ "AND HostName= ? AND PortNumber = ? AND CoreName = ?"
+			+ "from IoStatMetrics where AcquiredTimeStamp between ? AND ? "
+			+ "AND HostName= ? AND PortNumber = ? AND DeviceName = ?"
 			+ " ORDER BY AcquiredTimeStamp";
 	private static final String ACQUIRED_TIMESTAMP = "AcquiredTimeStamp";
 	private static final String METRIC_NAME="MetricName";
 	private static final String METRIC_VALUE = "MetricValue";
 
 	/**
-	 * 特定のCPUの指定した時間帯のメトリクス値を取得する
+	 * 特定Deviceの指定した時間帯のメトリクス値を取得する
 	 * @param start
 	 * @param end
 	 * @param hostname
 	 * @param corename
 	 * @param metricname
 	 * @return 特定の時間帯のメトリクス値を含んだCPUCoreインスタンス
-	 * @throws CPUPerformanceCollectorException
+	 * @throws IOPerformanceCollectorException
 	 */
-	public CPUCore getCPUMetrics(Timestamp start, Timestamp end, String hostname, int portnumber, String corename)  throws CPUPerformanceCollectorException {
-		CPUCore core = new CPUCore(corename);
+	public IODevice getIOMetrics(Timestamp start, Timestamp end, String hostname, int portnumber, String devicename)  throws IOPerformanceCollectorException {
 
-		try(PreparedStatement ps = connection.prepareStatement(SELECT_BETWEEN_SQL)) {
-
-
-
-			/*
-			 * パラメータを設定する。
-			 */
+		IODevice device = new IODevice(devicename);
+		try (PreparedStatement ps = connection.prepareStatement(SELECT_BETWEEN_SQL)) {
 			ps.setTimestamp(1, start);
 			ps.setTimestamp(2, end);
 			ps.setString(3, hostname);
 			ps.setInt(4, portnumber);
-			ps.setString(5, corename);
+			ps.setString(5, devicename);
 
-			/*
-			 * SQLを実行する。
-			 */
-			ps.execute();
-
-			ResultSet rs = ps.getResultSet();
+			ResultSet rs = ps.executeQuery();
 			while(rs.next()) {
-				Timestamp ats = rs.getTimestamp(ACQUIRED_TIMESTAMP);
-				Double value = rs.getDouble(METRIC_VALUE);
+				Timestamp time = rs.getTimestamp(ACQUIRED_TIMESTAMP);
 				String metricname = rs.getString(METRIC_NAME);
-				CPUPerformance performance = new CPUPerformance();
-				performance.putMetrics(metricname, value);
-				core.putPerformance(new Date(ats.getTime()), performance);
+				Double metricvalue = rs.getDouble(METRIC_VALUE);
+				IOPerformance performance = new IOPerformance();
+				performance.putMetrics(metricname, metricvalue);
+				device.putPerformance(new Date(time.getTime()), performance);
 			}
-		} catch (SQLException e) {
-			// TODO 自動生成された catch ブロック
+		} catch(SQLException e) {
 			e.printStackTrace();
-			throw new CPUPerformanceCollectorException();
 		}
-
-		return core;
+		return device;
 	}
 
 
-	private static final String TRUNCATE_CPU_METRICS_TABLE = "truncate table CPUMetrics";
+	private static final String TRUNCATE_IOSTAT_METRICS_TABLE = "truncate table IOStatMetrics";
+
+
 	/**
 	 *
 	 * @throws PerformanceCollectorException
 	 */
-	public void truncateCPUMetricTable() throws CPUPerformanceCollectorException {
-		try(PreparedStatement ps = connection.prepareStatement(TRUNCATE_CPU_METRICS_TABLE)) {
-			ps.executeUpdate();
+	public void truncateIOStatMetricsTable() throws IOPerformanceCollectorException{
+		try(PreparedStatement stmt = connection.prepareStatement(TRUNCATE_IOSTAT_METRICS_TABLE)) {
+			stmt.executeUpdate();
+			/*
+			 * JavaDBではDDL文でもCommitしなければいけない。
+			 */
 			connection.commit();
 		} catch (SQLException e) {
-			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
-			throw new CPUPerformanceCollectorException();
+			throw new IOPerformanceCollectorException();
 		}
 	}
-
 }

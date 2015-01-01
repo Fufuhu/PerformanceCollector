@@ -125,7 +125,7 @@ public class PerformanceDAOTest {
 
 		try {
 			dao.truncateCPUMetricTable();
-		} catch (PerformanceCollectorException e) {
+		} catch (CPUPerformanceCollectorException e) {
 			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
 			fail();
@@ -225,7 +225,7 @@ public class PerformanceDAOTest {
 
 		try {
 			dao.truncateCPUMetricTable();
-		} catch (PerformanceCollectorException e) {
+		} catch (CPUPerformanceCollectorException e) {
 			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
 		}
